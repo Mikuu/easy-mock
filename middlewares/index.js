@@ -52,6 +52,14 @@ module.exports = class Middleware {
   static mockFilter (ctx, next) {
     const pathNode = pathToRegexp('/mock/:projectId(.{24})/:mockURL*').exec(ctx.path)
 
+    // Added by Ariman.
+    const fullPathNode = pathToRegexp('/mock/:projectId(.{24})/:mockURL*').exec(ctx.originalUrl)
+
+    // console.log(`FBI --> Debug: middleWares ctx=`, ctx)
+    // console.log(`FBI --> Debug: middleWares ctx.path="${ctx.path}"`)
+    // console.log(`FBI --> Debug: middleWares pathNode="${pathNode}"`)
+    // console.log(`FBI --> Debug: middleWares fullPathNode="${fullPathNode}"`)
+
     if (!pathNode) ctx.throw(404)
     if (blackProjects.indexOf(pathNode[1]) !== -1) {
       ctx.body = ctx.util.refail('接口请求频率太快，已被限制访问')
@@ -60,7 +68,10 @@ module.exports = class Middleware {
 
     ctx.pathNode = {
       projectId: pathNode[1],
-      mockURL: '/' + (pathNode[2] || '')
+      mockURL: '/' + (pathNode[2] || ''),
+
+      // Added by Ariman.
+      mockFullURL: '/' + (fullPathNode[2] || '')
     }
 
     return next()

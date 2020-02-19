@@ -18,7 +18,10 @@ const schema = new Schema({
   create_at: {
     type: Date,
     default: Date.now
-  }
+  },
+  // added by Ariman.
+  headers: String,
+  body: String
 })
 
 schema.index({ project: 1, create_at: -1 })

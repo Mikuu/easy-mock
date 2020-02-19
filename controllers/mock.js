@@ -207,9 +207,13 @@ module.exports = class MockController {
     const { query, body } = ctx.request
     const method = ctx.method.toLowerCase()
     const jsonpCallback = query.jsonp_param_name && (query[query.jsonp_param_name] || 'callback')
-    let { projectId, mockURL } = ctx.pathNode
+    let { projectId, mockURL, mockFullURL } = ctx.pathNode
     const redisKey = 'project:' + projectId
     let apiData, apis, api
+
+    // const requestBody = Object.keys(body).length ? Object.keys(body)[0] : ''
+    // console.log(`FBI --> Debug: ctx.body -> `, body)
+    // console.log(`FBI --> Debug: ctx.body[0] -> "${requestBody}"`)
 
     apis = await redis.get(redisKey)
 
@@ -220,14 +224,97 @@ module.exports = class MockController {
       if (apis[0]) await redis.set(redisKey, JSON.stringify(apis), 'EX', 60 * 30)
     }
 
+    // force read from db. Added by Ariman
+    apis = await MockProxy.find({ project: projectId })
+
     if (apis[0] && apis[0].project.url !== '/') {
       mockURL = mockURL.replace(apis[0].project.url, '') || '/'
+
+      // added by Ariman. Remove the project url for path compare.
+      // console.log(`FBI --> Debug: checking .project.url="${apis[0].project.url}"`)
+      mockFullURL = mockFullURL.replace(apis[0].project.url, '') || '/'
     }
 
     api = apis.filter((item) => {
       const url = item.url.replace(/{/g, ':').replace(/}/g, '') // /api/{user}/{id} => /api/:user/:id
-      return item.method === method && pathToRegexp(url).test(mockURL)
+
+      // console.log(`FBI --> Debug: url="${url}", mockURL="${mockURL}", mockFullURL="${mockFullURL}"`)
+      // console.log(`FBI --> Debug: test url, "${pathToRegexp(url).test(mockURL)}"`)
+
+      // original code
+      // return item.method === method && pathToRegexp(url).test(mockURL)
+
+      /**
+       * Bellow logic, until the end of this filter function, are all added by Ariman.
+       * */
+
+      // filter path.
+      let accepted
+      const choice = 'fullPathOnly'
+      switch (choice) {
+        case 'basePathOnly':
+          accepted = item.method === method && pathToRegexp(url).test(mockURL)
+          break
+        case 'fullPathOnly':
+          accepted = item.method === method && pathToRegexp(url).test(mockFullURL)
+          break
+        default:
+          // basePathFirstThenFullPath, this could introduce mismatch in case there is separate record exists, which
+          // only has the basePath.
+          accepted = item.method === method && (pathToRegexp(url).test(mockURL) || pathToRegexp(url).test(mockFullURL))
+          break
+      }
+
+      // filter request headers.
+      /**
+       * headerString, e.g.:
+       *  'customer-header-item=header-miku,customer-header-another=header-nanoha'
+       *
+       * return:
+       *     {
+       *       customer-header-item: "header-miku",
+       *       customer-header-another: "header-nanoha"
+       *     }
+       */
+      const deSerializeHeaders = headerString => {
+        let headers = {}
+        headerString.split(',').map(each => {
+          const [headerKey, headerValue] = each.split('=')
+          headers[headerKey] = headerValue
+        })
+
+        return headers
+      }
+
+      if (item.headers) {
+        const recordedHeaders = deSerializeHeaders(item.headers)
+        Object.entries(recordedHeaders).map(entry => {
+          const [headerKey, headerValue] = entry
+
+          if (!ctx.request.header.hasOwnProperty(headerKey) || ctx.request.header[headerKey] !== headerValue) {
+            accepted = false
+            console.log(`FBI --> Info: request header mismatch! required header "${headerKey}"="${headerValue}" is not satisfied`)
+          }
+        })
+      }
+
+      // filter request body.
+      if (item.body) {
+        if (!_.isEqual(JSON.parse(item.body), body)) {
+          accepted = false
+          console.log(`FBI --> Info: request body mismatch!\n  Required body ->\n`, JSON.parse(item.body))
+          console.log(`  But got body ->\n`, body)
+        }
+      }
+
+      return accepted
     })[0]
+
+    // console.log('FBI --> Debug: apis', apis)
+    // apis.forEach(api => { console.log(`api.url: ${api.url}`) })
+
+    // console.log('FBI --> Debug: api', api)
+    // console.log('FBI --> Debug: before throw 404')
 
     if (!api) ctx.throw(404)
 
