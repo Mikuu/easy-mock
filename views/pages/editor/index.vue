@@ -2,6 +2,10 @@
   <div class="em-editor">
     <div class="em-editor__editor">
       <div ref="codeEditor"></div>
+      <BodyHeaderEditor v-if="enableBodyHeaderEditor" v-bind:body="temp.body" v-bind:headers="temp.headers"/>
+<!--      <div>-->
+<!--        <ArimanCodeMirror></ArimanCodeMirror>-->
+<!--      </div>-->
     </div>
     <div class="panel-info">
       <em-spots :size="10"></em-spots>
@@ -51,7 +55,65 @@
 <script>
 import * as api from '../../api'
 import jsBeautify from 'js-beautify/js/lib/beautify'
+import ArimanCodeMirror from '../../components/body-header-editor/ArimanCodeMirror'
+import BodyHeaderEditor from '../../components/body-header-editor/BodyHeaderEditor'
 let ace
+
+/**
+ * headerString, e.g.
+ *  "customer-header-item=header-miku,customer-header-another=header-nanoha"
+ *
+ * return:
+ *  [
+ *    {
+ *      key: 'customer-header-item',
+ *      value: 'header-miku'
+ *    },
+ *    {
+ *      key: 'customer-header-another',
+ *      value: 'header-nanoha'
+ *    }
+ *
+ *  ]
+ * */
+const headerStringToList = function (headerString) {
+  let headers = []
+  let key, value
+  headerString.split(',').map(headerEntity => {
+    let sections = headerEntity.split('=')
+    key = sections.shift()
+    value = sections.join('=') // in case there are multiple '=' in header value.
+    headers.push({key: key, value: value})
+  })
+
+  return headers
+}
+
+const headerListToString = function (headerList) {
+  return headerList.map(headerEntity => `${headerEntity.key}=${headerEntity.value}`).join(',')
+}
+
+/**
+ * bodyString, e.g.
+ *  "{ \n"name": "nanoha"\n}"
+ *
+ * return:
+ *  {
+ *    code: "{ \n"name": "nanoha"\n}"
+ *  }
+ *
+ *  WHY DO THIS? don't ask, it's ashamed. T_T.
+ * */
+const bodyStringToObject = function (bodyString) {
+  let bodyObject
+  if (bodyString) {
+    bodyObject = { code: bodyString }
+  } else {
+    bodyObject = { code: '' }
+  }
+
+  return bodyObject
+}
 
 if (typeof window !== 'undefined') {
   ace = require('brace')
@@ -78,13 +140,24 @@ export default {
       temp: {
         url: '',
         mode: '{"data": {}}',
-        method: 'get',
-        description: ''
+        method: '', // the original code has a 'get' for default, but it causes a wired bug, don't believe? you can try.
+        description: '',
+        body: {
+          code: ''
+        },
+        headers: []
       }
+      // enableBodyHeaderEditor: false
     }
   },
   computed: {
     mockData () {
+      // console.log('FBI --> Info: $store.state.mock.editorData.mock -> ', this.$store.state.mock.editorData.mock)
+      // console.log('FBI --> Info: $store.state.mock.editorData -> ', this.$store.state.mock.editorData)
+      // console.log('FBI --> Info: $store.state.mock -> ', this.$store.state.mock)
+      // console.log('FBI --> Info: $store.state -> ', this.$store.state)
+      // console.log('FBI --> Info: $store -> ', this.$store)
+
       return this.$store.state.mock.editorData.mock
     },
     baseUrl () {
@@ -95,6 +168,9 @@ export default {
     },
     isEdit () {
       return !!this.$route.params.id && this.mockData
+    },
+    enableBodyHeaderEditor () {
+      return this.isEdit && (this.mockData.body || this.mockData.headers)
     }
   },
   beforeRouteEnter (to, from, next) {
@@ -131,6 +207,16 @@ export default {
       this.temp.mode = this.mockData.mode
       this.temp.method = this.mockData.method
       this.temp.description = this.mockData.description
+
+      console.log('FBI --> Info: this.mockData --> ', this.mockData)
+      console.log('FBI --> Info: temp.method --> ', this.temp.method)
+      // if (this.mockData.body) {
+      //   this.temp.body = { code: this.mockData.body }
+      // } else {
+      //   this.temp.body = { code: '' }
+      // }
+      this.temp.body = bodyStringToObject(this.mockData.body)
+      this.temp.headers = this.mockData.headers ? headerStringToList(this.mockData.headers) : []
     }
 
     this.$nextTick(() => {
@@ -144,6 +230,12 @@ export default {
       return newUrl === '/'
         ? '/'
         : newUrl.replace(/\/\//g, '/').replace(/\/$/, '')
+    },
+    withSerializedBodyAndHeaders () {
+      let _temp = {...this.temp}
+      _temp.headers = headerListToString(_temp.headers)
+      _temp.body = _temp.body.code
+      return _temp
     },
     format () {
       const context = this.codeEditor.getValue()
@@ -180,7 +272,8 @@ export default {
       if (this.isEdit) {
         api.mock.update({
           data: {
-            ...this.temp,
+            // ...this.temp, // the original code
+            ...this.withSerializedBodyAndHeaders(), // added by Ariman
             id: this.mockData._id,
             url: mockUrl
           }
@@ -208,6 +301,10 @@ export default {
     preview () {
       window.open(this.baseUrl + this.mockData.url + '#!method=' + this.mockData.method)
     }
+  },
+  components: {
+    BodyHeaderEditor,
+    ArimanCodeMirror
   }
 }
 </script>

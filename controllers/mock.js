@@ -16,6 +16,8 @@ const { MockProxy, ProjectProxy, UserGroupProxy } = require('../proxy')
 const redis = util.getRedis()
 const defPageSize = config.get('pageSize')
 
+const colors = require('colors')
+
 async function checkByMockId (mockId, uid) {
   const api = await MockProxy.getById(mockId)
 
@@ -100,6 +102,8 @@ module.exports = class MockController {
    */
 
   static async list (ctx) {
+    console.log(`FBI --> Info: you called me! `)
+
     const uid = ctx.state.user.id
     const keywords = ctx.query.keywords
     const projectId = ctx.checkQuery('project_id').notEmpty().value
@@ -162,6 +166,10 @@ module.exports = class MockController {
     const url = ctx.checkBody('url').notEmpty().match(/^\/.*$/i, 'URL 必须以 / 开头').value
     const method = ctx.checkBody('method').notEmpty().toLow().in(['get', 'post', 'put', 'delete', 'patch']).value
 
+    // added by Ariman
+    const body = ctx.checkBody('body').value
+    const headers = ctx.checkBody('headers').value
+
     if (ctx.errors) {
       ctx.body = ctx.util.refail(null, 10001, ctx.errors)
       return
@@ -181,17 +189,24 @@ module.exports = class MockController {
     api.method = method
     api.description = description
 
-    const existMock = await MockProxy.findOne({
-      _id: { $ne: api.id },
-      project: project.id,
-      url: api.url,
-      method: api.method
-    })
+    api.body = body
+    api.headers = headers
 
-    if (existMock) {
-      ctx.body = ctx.util.refail('接口已经存在')
-      return
-    }
+    // below original logic checking existing mock, doesn't make sense at all, and also blocks updating mock created
+    // by wm, so just disable the checking, until found any defects related to this.
+    // const existMock = await MockProxy.findOne({
+    //   _id: { $ne: api.id },
+    //   project: project.id,
+    //   url: api.url,
+    //   method: api.method
+    // })
+    //
+    // console.log(`FBI --> Info: got new mock.id ${api.id}, find existMock ${existMock._id}`)
+    //
+    // if (existMock) {
+    //   ctx.body = ctx.util.refail('接口已经存在')
+    //   return
+    // }
 
     await MockProxy.updateById(api)
     await redis.del('project:' + project.id)
@@ -247,6 +262,7 @@ module.exports = class MockController {
       /**
        * Bellow logic, until the end of this filter function, are all added by Ariman.
        * */
+      console.log(`\nFBI ---> Info: filtering api ============================================ ${item._id} ======\n`)
 
       // filter path.
       let accepted
@@ -278,11 +294,16 @@ module.exports = class MockController {
        */
       const deSerializeHeaders = headerString => {
         let headers = {}
+        let sections, headerKey, headerValue
         headerString.split(',').map(each => {
-          const [headerKey, headerValue] = each.split('=')
+          sections = each.split('=')
+          headerKey = sections.shift()
+          headerValue = sections.join('=')
           headers[headerKey] = headerValue
         })
 
+        console.log(`FBI --> Info: incoming headerString="${headerString}"`)
+        console.log(`FBI --> Info: incoming headerObject=\n`, headers, '\n')
         return headers
       }
 
@@ -293,7 +314,8 @@ module.exports = class MockController {
 
           if (!ctx.request.header.hasOwnProperty(headerKey) || ctx.request.header[headerKey] !== headerValue) {
             accepted = false
-            console.log(`FBI --> Info: request header mismatch! required header "${headerKey}"="${headerValue}" is not satisfied`)
+            console.log(`FBI --> Info: request header ` + `mismatch!`.red + `required header "` +
+              `${headerKey}`.magenta + `=` + `${headerValue}`.cyan + ` is not satisfied`)
           }
         })
       }
@@ -302,8 +324,8 @@ module.exports = class MockController {
       if (item.body) {
         if (!_.isEqual(JSON.parse(item.body), body)) {
           accepted = false
-          console.log(`FBI --> Info: request body mismatch!\n  Required body ->\n`, JSON.parse(item.body))
-          console.log(`  But got body ->\n`, body)
+          console.log(`\nFBI --> Info: request body ` + `mismatch!\n`.red + `  Required body ->\n`.magenta, JSON.parse(item.body))
+          console.log(`\n  But got body ->\n`.cyan, body)
         }
       }
 

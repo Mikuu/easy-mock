@@ -40,6 +40,8 @@
             </Col>
           </Row>
         </div>
+
+
         <div class="em-proj-detail__switcher">
           <ul>
             <li @click="openEditor()" v-shortkey="['ctrl', 'n']" @shortkey="openEditor()">
@@ -56,8 +58,20 @@
               <Icon type="loop"></Icon> {{$t('p.detail.syncSwagger.action')}}
             </li>
             <li @click="download"><Icon type="code-download"></Icon> {{$tc('p.detail.download', 1)}}</li>
+
+
+            <li @click="recorderAction"><Icon v-bind:color="recorder.iconColor" type="android-radio-button-on"></Icon> {{ recorder.label }} </li>
+            <StartRecord
+              v-bind:recorder="recorder"
+              v-on:modalOk="modalOk"
+              v-on:modalCancel="modalCancel"
+              v-on:modalAddHeader="modalAddHeader"
+              v-on:modalRemoveHeader="modalRemoveHeader"/>
+
           </ul>
         </div>
+
+
         <div class="em-proj-detail__members" v-if="project.members.length">
           <em-spots :size="6"></em-spots>
           <h2><Icon type="person-stalker"></Icon> {{$t('p.detail.member')}}</h2>
@@ -89,6 +103,7 @@ import debounce from 'lodash/debounce'
 import * as api from '../../api'
 import Project from '../new/project'
 import MockExpand from './mock-expand'
+import StartRecord from './start-record'
 
 export default {
   name: 'projectDetail',
@@ -187,7 +202,24 @@ export default {
             )
           }
         }
-      ]
+      ],
+      recorder: {
+        isRecording: false,
+        openRecordModal: false,
+        label: 'Record',
+        iconColor: 'inherit', // or 'chartreuse'
+        targetHost: '',
+        headers: [
+          {
+            key: 'header-key-1',
+            value: 'header-value-1'
+          },
+          {
+            key: 'header-key-2',
+            value: 'header-value-2'
+          }
+        ]
+      }
     }
   },
   asyncData ({ store, route }) {
@@ -337,9 +369,54 @@ export default {
       } else {
         this.$router.push(`/editor/${this.project._id}`)
       }
-    }
+    },
+    recorderAction () {
+      if (this.recorder.isRecording) {
+        this.recorder.isRecording = false
+        this.recorder.label = 'Record'
+        this.recorder.iconColor = 'inherit'
+      } else {
+        this.recorder.openRecordModal = true
+      }
+    },
+    modalOk: function () {
+      this.recorder.isRecording = true
+      this.recorder.label = 'Stop Recording'
+      this.recorder.iconColor = 'chartreuse'
+      this.recorder.openRecordModal = false
+      this.startWMRecording()
+    },
+    modalCancel: function () {
+      this.recorder.openRecordModal = false
+    },
+    modalAddHeader () {
+      this.recorder.headers.push({ key: '', value: '' })
+    },
+    modalRemoveHeader (index) {
+      this.recorder.headers.splice(index, 1)
+    },
+    startWMRecording () {
+      console.log(`FBI --> Info: start WM recording ...`)
+
+      // api.record.echo()
+
+      api.record.echo({
+        // data: { project_id: this.project._id, ids }
+      }).then((res) => {
+        console.log('FBI --> Info: in success ...')
+        console.log(res)
+        if (res.status === 200) {
+          this.$Message.success('^_^')
+          this.$store.commit('mock/SET_REQUEST_PARAMS', { pageIndex: 1 })
+          this.$store.dispatch('mock/FETCH', this.$route)
+        }
+      })
+    },
+    stopWMRecording () {}
+
   },
   components: {
+    StartRecord,
     Project
   }
 }

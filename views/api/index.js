@@ -3,6 +3,7 @@ import iView from 'iview'
 import conf from 'config'
 import Cookies from 'universal-cookie'
 import { serverCookies } from '../entry/server'
+// import arimanConfig from '../../config/ariman.config'
 
 let router
 const cookies = new Cookies()
@@ -164,6 +165,29 @@ const mock = {
   export: config => createExportForm('/api/mock/export', config)
 }
 
+const recorderInstance = axios.create({
+  baseURL: 'http://localhost:8081/automation/api/v1/wadapter',
+  timeout: conf.timeout
+})
+
+const recorderCreateAPI = (url, method, config) => {
+  config = config || {}
+  return recorderInstance({
+    url,
+    method,
+    ...config
+  })
+}
+
+const record = {
+  // echo: () => {
+  //   console.log(arimanConfig.recorder.wiremock.startRecordingUrl)
+  // },
+  echo: config => recorderCreateAPI('/echo', 'get', config),
+  start: config => recorderCreateAPI('/record/start', 'post', config),
+  stop: config => recorderCreateAPI('/mock/create', 'post', config)
+}
+
 const group = {
   getList: config => createAPI('/group', 'get', config),
   join: config => createAPI('/group/join', 'post', config),
@@ -180,6 +204,7 @@ export {
   u,
   project,
   mock,
+  record,
   util,
   group,
   dashboard,

@@ -9,6 +9,7 @@ import group from './modules/group'
 import project from './modules/project'
 import dashboard from './modules/dashboard'
 import wallpaper from './modules/wallpaper'
+import record from './modules/record'
 
 Vue.use(Vuex)
 
@@ -86,6 +87,12 @@ export function createStore () {
           url: ''
         },
         ...wallpaper
+      },
+      record: {
+        state: {
+          clients: [] // client: { projectId: 'xxx', clientId: 'xxx', recorderBaseUrl: 'xxx' }
+        },
+        ...record
       }
     }
   })
