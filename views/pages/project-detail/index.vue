@@ -209,16 +209,7 @@ export default {
         label: 'Record',
         iconColor: 'inherit', // or 'chartreuse'
         targetHost: '',
-        headers: [
-          {
-            key: 'header-key-1',
-            value: 'header-value-1'
-          },
-          {
-            key: 'header-key-2',
-            value: 'header-value-2'
-          }
-        ]
+        headers: [] // e.g. {key:'header-key'}
       }
     }
   },
@@ -372,6 +363,7 @@ export default {
     },
     recorderAction () {
       if (this.recorder.isRecording) {
+        this.stopWMRecording()
         this.recorder.isRecording = false
         this.recorder.label = 'Record'
         this.recorder.iconColor = 'inherit'
@@ -390,29 +382,67 @@ export default {
       this.recorder.openRecordModal = false
     },
     modalAddHeader () {
-      this.recorder.headers.push({ key: '', value: '' })
+      this.recorder.headers.push({key: ''})
     },
     modalRemoveHeader (index) {
       this.recorder.headers.splice(index, 1)
     },
     startWMRecording () {
-      console.log(`FBI --> Info: start WM recording ...`)
+      // console.log(`projectId=${this.project._id}`)
+      // console.log(`target=${this.recorder.targetHost}`)
+      // console.log(this.recorder.headers)
 
-      // api.record.echo()
-
-      api.record.echo({
-        // data: { project_id: this.project._id, ids }
+      api.record.start({
+        data: {projectId: this.project._id, target: this.recorder.targetHost, captureHeaders: this.recorder.headers.map(header => header.key)}
       }).then((res) => {
         console.log('FBI --> Info: in success ...')
         console.log(res)
-        if (res.status === 200) {
-          this.$Message.success('^_^')
-          this.$store.commit('mock/SET_REQUEST_PARAMS', { pageIndex: 1 })
-          this.$store.dispatch('mock/FETCH', this.$route)
+        if (res && res.data && res.data.code === 200) {
+          this.$store.commit('record/ADD_RECORDER', {
+            recorder: {
+              projectId: this.project._id,
+              serverId: res.data.data.serverId,
+              recorderBaseUrl: res.data.data.recorderBaseUrl
+            }
+          })
+          this.$Message.success('create recorder succeed')
+        } else {
+          const errorMessage = res && res.data && res.data.message ? res.data.message : 'create recorder failed'
+          console.error(`FBI --> Error: ${errorMessage}`)
+          this.$Message.error(errorMessage)
         }
       })
     },
-    stopWMRecording () {}
+    stopWMRecording () {
+      console.log(this.$store.state.record)
+
+      let recorder, index
+      for (index = 0; index < this.$store.state.record.recorders.length; index++) {
+        if (this.$store.state.record.recorders[index].projectId === this.project._id) {
+          recorder = this.$store.state.record.recorders[index]
+        }
+      }
+
+      if (!recorder) {
+        this.$Message.error('failed to stop recorder, no recorder existing')
+        return
+      }
+
+      api.record.stop({
+        params: {serverId: recorder.serverId, projectId: recorder.projectId}
+      }).then(res => {
+        if (res && res.data && res.data.code === 200) {
+          this.$store.commit('record/REMOVE_RECORDER', {
+            recorder: recorder
+          })
+          this.$Message.success('stop recorder succeed')
+        } else {
+          const errorMessage = res && res.data && res.data.message ? res.data.message : 'stop recorder failed'
+          console.error(`FBI --> Error: ${errorMessage}`)
+          this.$Message.error(errorMessage)
+        }
+      })
+    }
 
   },
   components: {

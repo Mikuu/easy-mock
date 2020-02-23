@@ -90,7 +90,7 @@ export function createStore () {
       },
       record: {
         state: {
-          clients: [] // client: { projectId: 'xxx', clientId: 'xxx', recorderBaseUrl: 'xxx' }
+          recorders: [] // recorder: { projectId: 'xxx', serverId: 'xxx', recorderBaseUrl: 'xxx' }
         },
         ...record
       }

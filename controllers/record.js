@@ -53,6 +53,14 @@ module.exports = class RecordController {
       return
     }
 
+    const existRecord = await RecordProxy.getByProjectId(projectId)
+    if (existRecord) {
+      const errorMessage = `FBI --> Error: record for projectId=${projectId} already existed, unable to recreate`
+      console.error(errorMessage)
+      ctx.body = ctx.util.refail(errorMessage, 500)
+      return
+    }
+
     console.log(`FBI --> Info: sending request to Wadapter to start record, targetHost=${target}`, captureHeaders)
 
     const res = await record.start({data: {target: target, captureHeaders: captureHeaders}})

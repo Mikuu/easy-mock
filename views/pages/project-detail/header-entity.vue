@@ -1,11 +1,8 @@
 <template>
   <div>
     <Row>
-      <Col class="key-container" span="11">
+      <Col class="key-container" span="23">
         <Input v-model="header.key" placeholder="key"></Input>
-      </Col>
-      <Col class="value-container" span="11">
-        <Input v-model="header.value" placeholder="value"></Input>
       </Col>
       <Col class="delete-container" span="1">
         <Button class="delete-button" type="text" v-on:click="removeHeaderEntity">-</Button>
@@ -19,10 +16,7 @@
   export default {
     name: 'HeaderEntity',
     data () {
-      return {
-        key: '',
-        value: ''
-      }
+      return {}
     },
     props: ['header', 'index'],
     methods: {
