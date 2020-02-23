@@ -165,27 +165,11 @@ const mock = {
   export: config => createExportForm('/api/mock/export', config)
 }
 
-const recorderInstance = axios.create({
-  baseURL: 'http://localhost:8081/automation/api/v1/wadapter',
-  timeout: conf.timeout
-})
-
-const recorderCreateAPI = (url, method, config) => {
-  config = config || {}
-  return recorderInstance({
-    url,
-    method,
-    ...config
-  })
-}
-
 const record = {
-  // echo: () => {
-  //   console.log(arimanConfig.recorder.wiremock.startRecordingUrl)
-  // },
-  echo: config => recorderCreateAPI('/echo', 'get', config),
-  start: config => recorderCreateAPI('/record/start', 'post', config),
-  stop: config => recorderCreateAPI('/mock/create', 'post', config)
+  get: config => createAPI('/record', 'get', config),
+  echo: config => createAPI('/record/echo', 'get', config),
+  start: config => createAPI('/record/start', 'post', config),
+  stop: config => createAPI('/record/stop', 'post', config)
 }
 
 const group = {

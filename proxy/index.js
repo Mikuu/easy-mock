@@ -7,5 +7,6 @@ module.exports = {
   ProjectProxy: require('./project'),
   MockCountProxy: require('./mock_count'),
   UserGroupProxy: require('./user_group'),
-  UserProjectProxy: require('./user_project')
+  UserProjectProxy: require('./user_project'),
+  RecordProxy: require('./record')
 }

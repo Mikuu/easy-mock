@@ -10,7 +10,8 @@ const {
   util,
   group,
   project,
-  dashboard
+  dashboard,
+  record
 } = require('./controllers')
 const baseUtil = require('./util')
 const middleware = require('./middlewares')
@@ -65,3 +66,8 @@ exports.api = apiRouter
   .post('/mock/update', mock.update)
   .post('/mock/delete', mock.delete)
   .post('/mock/export', mock.exportAPI)
+
+  .get('/record', record.get)
+  .get('/record/echo', record.echo)
+  .post('/record/start', record.start)
+  .post('/record/stop', record.stop)
