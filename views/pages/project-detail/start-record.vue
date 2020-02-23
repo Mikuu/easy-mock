@@ -3,7 +3,6 @@
     v-model="recorder.openRecordModal"
     @on-ok="ok"
     @on-cancel="cancel">
-
     <div class="root-container">
       <div class="target-root-container">
         <Row type="flex" justify="center">

@@ -227,7 +227,7 @@ module.exports = class MockController {
     let apiData, apis, api
 
     // const requestBody = Object.keys(body).length ? Object.keys(body)[0] : ''
-    // console.log(`FBI --> Debug: ctx.body -> `, body)
+    console.log(`FBI --> Debug: ctx.request.body -> `, body)
     // console.log(`FBI --> Debug: ctx.body[0] -> "${requestBody}"`)
 
     apis = await redis.get(redisKey)

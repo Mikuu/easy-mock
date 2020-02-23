@@ -31,6 +31,10 @@
                 <span>Project ID</span>
                 {{project._id}}
               </p>
+              <p v-if="recorderBaseUrl" class="tag">
+                <span style="width: 132px">Recorder Base URL</span>
+                {{recorderBaseUrl}}
+              </p>
             </Col>
             <Col span="5">
               <div>
@@ -248,6 +252,15 @@ export default {
     },
     group () {
       return this.project.group
+    },
+    recorderBaseUrl () {
+      let i, url
+      for (i = 0; i < this.$store.state.record.recorders.length; i++) {
+        if (this.$store.state.record.recorders[i].projectId === this.project._id) {
+          url = this.$store.state.record.recorders[i].recorderBaseUrl
+        }
+      }
+      return url
     }
   },
   methods: {
