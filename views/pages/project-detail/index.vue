@@ -385,6 +385,11 @@ export default {
       }
     },
     modalOk: function () {
+      if (!this.recorder.targetHost) {
+        this.$Message.error('targetHost is empty, unable to start recording')
+        return
+      }
+
       this.recorder.isRecording = true
       this.recorder.label = 'Stop Recording'
       this.recorder.iconColor = 'chartreuse'
